@@ -12,8 +12,11 @@ end
 require 'rake'
 
 require 'jeweler'
+require_relative 'lib/mal'
+
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://guides.rubygems.org/specification-reference/ for more options
+  gem.version = Mal::VERSION
   gem.name = "mal"
   gem.homepage = "http://github.com/julik/mal"
   gem.license = "MIT"
