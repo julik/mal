@@ -18,7 +18,7 @@ Array only contains booleans:
 
 You can also match Hashes, which lends itself to JSON assertions quite nicely:
 
-    Mal.HashOf(name: String, age: Numeric) === {name: 'Jane', age: 22, accepted_license_agreement: true} #=> true
+    Mal.HashWith(name: String, age: Numeric) === {name: 'Jane', age: 22, accepted_license_agreement: true} #=> true
 
 You can also use these type matchers for case statements:
 
