@@ -211,5 +211,10 @@ module Mal
     HashOfOnlyT.new(**keys_to_values)
   end
   
+  # Just like it says: will match any value given to it
+  def Anything()
+    AnythingT.new
+  end
+  
   extend self
 end

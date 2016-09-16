@@ -218,4 +218,16 @@ describe 'Mal' do
     end
   end
   
+  describe 'Anything()' do
+    it 'has a reasonable inspect' do
+      expect(Anything().inspect).to eq('Anything()')
+    end
+    
+    it 'matches truly anything' do
+      expect_match_of(Anything(), {})
+      expect_match_of(Anything(), self)
+      expect_match_of(Anything(), true)
+      expect_match_of(Anything(), false)
+    end
+  end
 end
