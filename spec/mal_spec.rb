@@ -13,6 +13,29 @@ describe 'Mal' do
     expect(match_v).to eq(false), "Expected #{value.inspect} not to match #{typespec.inspect}"
   end
 
+  describe 'Anything()' do
+    it 'provides a good inspect' do
+      expect(Anything().inspect).to eq('Anything()')
+    end
+    
+    it 'matches anything' do
+      expect_match_of(Anything(), 0)
+      expect_match_of(Anything(), self)
+      expect_match_of(Anything(), true)
+      expect_match_of(Anything(), nil)
+    end
+    
+    it 'ORs to itself' do
+      m = Anything() | Bool()
+      expect(m.inspect).to eq('Anything()')
+    end
+
+    it 'ANDs to the right operand' do
+      m = Anything() & Bool()
+      expect(m.inspect).to eq('Bool()')
+    end
+  end
+  
   describe 'Nil()' do
     it 'provides a good inspect' do
       expect(Nil().inspect).to eq('Nil()')
@@ -23,6 +46,20 @@ describe 'Mal' do
       expect_no_match_of(Nil(), 0)
       expect_no_match_of(Nil(), Object.new)
       expect_no_match_of(Nil(), self)
+    end
+    
+    it 'ORs to a Maybe of Nil() and Bool()' do
+      m = Nil() | Bool()
+      expect(m.inspect).to eq('Maybe(Bool())')
+      expect_match_of(m, nil)
+      expect_match_of(m, true)
+      expect_match_of(m, false)
+      expect_no_match_of(m, 0)
+    end
+    
+    it 'ANDs to a Both()' do
+      m = Nil() & Bool()
+      expect(m.inspect).to eq('Both(Nil(), Bool())')
     end
   end
 
@@ -39,6 +76,21 @@ describe 'Mal' do
       expect_no_match_of(Bool(), 'hello world')
       expect_no_match_of(Bool(), 123)
     end
+    
+    it 'ORs to a an Either()' do
+      m = Bool() | Fixnum
+      expect(m.inspect).to eq('Either(Bool(), Fixnum)')
+      expect_match_of(m, true)
+      expect_match_of(m, false)
+      expect_match_of(m, 12)
+      expect_no_match_of(m, 'hello world')
+      expect_no_match_of(m, [])
+    end
+    
+    it 'ANDs to a Both()' do
+      m = Bool() & TrueClass
+      expect(m.inspect).to eq('Both(Bool(), TrueClass)')
+    end
   end
   
   describe 'Either()' do
@@ -54,6 +106,31 @@ describe 'Mal' do
       expect_no_match_of(m, nil)
       expect_no_match_of(m, self)
     end
+    
+    it 'ORs to a union Either()' do
+      m = Either(Fixnum, TrueClass) | Anything()
+      expect(m.inspect).to eq('Either(Fixnum, TrueClass, Anything())')
+      expect_match_of(m, true)
+      expect_match_of(m, false)
+      expect_match_of(m, 12)
+      expect_match_of(m, 'hello world')
+      expect_match_of(m, [])
+    end
+    
+    it 'ORs to a union of two Either() types' do
+      m = Either(Fixnum, TrueClass) | Either(Fixnum, FalseClass)
+      expect(m.inspect).to eq('Either(Fixnum, TrueClass, FalseClass)')
+      expect_match_of(m, true)
+      expect_match_of(m, false)
+      expect_match_of(m, 12)
+      expect_no_match_of(m, 'hello world')
+      expect_no_match_of(m, [])
+    end
+    
+    it 'ANDs to a Both()' do
+      m = Either(Fixnum, TrueClass) & TrueClass
+      expect(m.inspect).to eq('Both(Either(Fixnum, TrueClass), TrueClass)')
+    end
   end
 
   describe 'Maybe()' do
@@ -67,6 +144,16 @@ describe 'Mal' do
       expect_match_of(m, 'foo')
       expect_no_match_of(m, false)
       expect_no_match_of(m, self)
+    end
+    
+    it 'ORs to an Either()' do
+      m = Maybe(String) | Fixnum
+      expect(m.inspect).to eq('Either(NilClass, String, Fixnum)')
+    end
+    
+    it 'ANDs to a Both()' do
+      m = Maybe(String) & TrueClass
+      expect(m.inspect).to eq('Both(Maybe(String), TrueClass)')
     end
   end
   
@@ -97,6 +184,19 @@ describe 'Mal' do
       expect_no_match_of(m, [true, false, 1, 'foo'])
       expect_match_of(m, [true, false, 1])
     end
+    
+    it 'ORs to an Either()' do
+      m = ArrayOf(String) | ArrayOf(Fixnum)
+      expect(m.inspect).to eq('Either(ArrayOf(String), ArrayOf(Fixnum))')
+      expect_match_of(m, ['a', 'b', 'c'])
+      expect_match_of(m, [1, 2, 3])
+      expect_no_match_of(m, ['a', 2, 3])
+    end
+    
+    it 'ANDs to a Both()' do
+      m = ArrayOf(Maybe(String)) & ArrayOf(String)
+      expect(m.inspect).to eq('Both(ArrayOf(Maybe(String)), ArrayOf(String))')
+    end
   end
 
   describe 'Both()' do
@@ -109,6 +209,30 @@ describe 'Mal' do
       m = Both(String, /abc/)
       expect_match_of(m, 'this is an abc string')
       expect_no_match_of(m, 'this is a string that does match the second parameter')
+    end
+    
+    it 'ORs to an Either()' do
+      m = Both(String, /hello/) | Fixnum
+      expect(m.inspect).to eq('Either(Both(String, /hello/), Fixnum)')
+      expect_match_of(m, 'hello')
+      expect_no_match_of(m, 'goodbye')
+      expect_match_of(m, 123)
+    end
+
+    it 'ANDs to a Both()' do
+      m = Both(String, /hello/) & Maybe(Fixnum)
+      expect(m.inspect).to eq('Both(Both(String, /hello/), Maybe(Fixnum))')
+      expect_no_match_of(m, 'hello')
+      expect_no_match_of(m, 'goodbye')
+      expect_no_match_of(m, 123)
+    end
+
+    it 'ANDs to a flattened Both() if the right hand operand is also a Both' do
+      m = Both(String, /hello/) & Both(String, /he/)
+      expect(m.inspect).to eq('Both(String, /hello/, /he/)')
+      expect_match_of(m, 'hello')
+      expect_no_match_of(m, 'goodbye')
+      expect_no_match_of(m, 123)
     end
   end
 
@@ -145,6 +269,22 @@ describe 'Mal' do
       m = HashWith(name: String)
       expect_match_of(m, {name: 'John Doe', age: 21})
     end
+    
+    it 'ORs to an Either()' do
+      m = HashWith(name: String) | HashWith(first_name: String, last_name: String)
+      expect(m.inspect).to eq('Either(HashWith(:name=>String), HashWith(:first_name=>String, :last_name=>String))')
+      expect_match_of(m, {name: 'Jane'})
+      expect_match_of(m, {first_name: 'Jane', last_name: 'Doe'})
+      expect_match_of(m, {name: 'Jane', first_name: 'Jane', last_name: 'Doe'})
+    end
+    
+    it 'ANDs to a Both' do
+      m = Both(HashWith(name: Anything()), HashWith(age: Anything()))
+      expect(m.inspect).to eq('Both(HashWith(:name=>Anything()), HashWith(:age=>Anything()))')
+      expect_match_of(m, {name: nil, age: 12})
+      expect_no_match_of(m, {name: 'Jane'})
+      expect_no_match_of(m, {age: 21})
+    end
   end
   
   describe 'HashOf()' do
@@ -179,6 +319,14 @@ describe 'Mal' do
     it 'does not match a Hash that has more keys than requested' do
       m = HashOf(name: String)
       expect_no_match_of(m, {name: 'John Doe', age: 21})
+    end
+    
+    it 'ORs to an Either()' do
+      m = HashOf(name: String) | HashOf(first_name: String, last_name: String)
+      expect(m.inspect).to eq('Either(HashOf(:name=>String), HashOf(:first_name=>String, :last_name=>String))')
+      expect_match_of(m, {name: 'Jane'})
+      expect_match_of(m, {first_name: 'Jane', last_name: 'Doe'})
+      expect_no_match_of(m, {name: 'Jane', first_name: 'Jane', last_name: 'Doe'})
     end
   end
   

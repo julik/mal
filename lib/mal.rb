@@ -1,5 +1,43 @@
+# The module allows you to define simple data structure schemas, and to match your data against
+# those schemas. Primary use is for HTTP parameters, JSON-derived datastructures and the like.
+#
+# Let's start with the basics. Any "typespec" returned by the library responds to `===`. The most
+# basic (and all-encompassing) typespec there is is called `Anything()`.
+#
+#     Anything() === false  #=> true
+#     Anything() === true   #=> true
+#     Anything() === Module #=> true
+#
+# A more specific type is an Only(), which is similar to just using a class, module or Regexp (which
+# all support ===), but it can be composed with other typespecs.
+#
+#    Only(/hello/) === 123           #=> false
+#    Only(/hello/) === "hello world" #=> true
+#
+# Interesting things come into play when you use combinations of the typespecs. For example, you want
+# to ensure the value referenced by `my_var` is either a Fixnum or a String matching a regular expression.
+# For this, you need to create a compound matcher using an `Either()` typespec (disjoint union):
+#
+#    Either(Fixnum, Both(String, /hello/)) === "hello world"  #=> true
+#    Either(Fixnum, Both(String, /hello/)) === 123            #=> true
+#    Either(Fixnum, Both(String, /hello/)) === Module         #=> false, since it is neither of
+#
+# You can also use the `|` operator on most of the typespecs to create these disjoint unions - but
+# if you have a matchable object on the left side of the expression you mught have to wrap it in an
+# `Only()`:
+#
+#    Only(Fixnum) | Only(String) #=> Either(Fixnum, String)
+#
+# Even more entertainment becomes possible when you match deeper structures with nesting - hashes for example.
+# There are two methods for those - `HashWith()` and `HashOf`. `HashWith` checks for the presence of the given
+# key/value pairs and checks values for matches, but if there are _other_ keys present in the Hash given for
+# verification it won't complain. `HashOf()`, in contrast, will ensure there are _only_ the mentioned keys
+# in the Hash, and will not match if something else is present.
+#
+#    HashWith(age: Fixnum) === {age: 12, name: 'Cisco Kid'} #=> true
+#    HashOf(age: Fixnum) === {age: 12, name: 'Cisco Kid'} #=> false
 module Mal
-  VERSION = '0.0.2'
+  VERSION = '0.0.3'
   
   class AnythingT
     def ===(value)
@@ -7,6 +45,14 @@ module Mal
     end
     def inspect
       'Anything()'
+    end
+    
+    def |(another)
+      self
+    end
+    
+    def &(another)
+      another # Another is automatically considered more specific, and replaces Anything
     end
   end
 
@@ -22,13 +68,30 @@ module Mal
     def inspect
       'Only(%s)' % @matchable.inspect
     end
+    
+    def |(another)
+      if another.is_a?(AnythingT)
+        another
+      else
+        EitherT.new(self, another)
+      end
+    end
+    
+    def &(another)
+      if another.is_a?(AnythingT)
+        self
+      else
+        UnionT.new(self, another)
+      end
+    end
   end
 
   class NilT < OnlyT
     def inspect; 'Nil()'; end
+    def |(another); MaybeT.new(another); end
   end
 
-  class HashT
+  class HashT < OnlyT
     def initialize(**required_keys_to_matchers)
       @required_keys_to_matchers = required_keys_to_matchers
     end
@@ -105,6 +168,7 @@ module Mal
   end
 
   class EitherT < OnlyT
+    attr_reader :types
     def initialize(*types)
       @types = types
     end
@@ -116,9 +180,19 @@ module Mal
     def inspect
       'Either(%s)' % @types.map{|e| e.inspect }.join(', ')
     end
+    
+    def |(another)
+      types_matched = if another.is_a?(EitherT)
+        (@types + another.types).uniq
+      else
+        (@types + [another]).uniq
+      end
+      EitherT.new(*types_matched)
+    end
   end
 
   class UnionT < OnlyT
+    attr_reader :types
     def initialize(*types)
       @types = types
     end
@@ -130,15 +204,25 @@ module Mal
     def inspect
       'Both(%s)' % @types.map{|e| e.inspect }.join(', ')
     end
+    
+    def &(another)
+      if another.is_a?(UnionT)
+        unique_types = (@types + another.types).uniq
+        return UnionT.new(*unique_types)
+      end
+      super
+    end
   end
 
   class MaybeT < EitherT
+    def initialize(matchable); super(NilClass, matchable); end
     def inspect; 'Maybe(%s)' % @types[1].inspect; end
   end
   
   class BoolT < EitherT
     def initialize; super(TrueClass, FalseClass); end
     def inspect; 'Bool()'; end
+    def |(another); EitherT.new(self, another); end
   end
   
   private_constant :NilT, :BoolT, :EitherT, :MaybeT, :ArrayT, :HashT, :BoolT, :HashOfOnlyT, :MaxLengthT, :MinLengthT
@@ -171,7 +255,7 @@ module Mal
 
   # Specifies a value that is either matching the given typespec, or is nil
   def Maybe(matchable)
-    MaybeT.new(NilClass, matchable)
+    MaybeT.new(matchable)
   end
 
   # Specifies an Array of at least 1 element, where each element matches the
