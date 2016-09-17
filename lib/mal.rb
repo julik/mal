@@ -110,6 +110,31 @@ module Mal
     end
   end
   
+  class ObjectT < OnlyT
+    attr_reader :supported_methods
+    def initialize(*supported_methods)
+      @supported_methods = supported_methods.map(&:to_sym)
+    end
+  
+    def ===(value)
+      @supported_methods.each do |m|
+        return false unless value.respond_to?(m)
+      end
+      true
+    end
+
+    def inspect
+      'ObjectWith(%s)' % @supported_methods.map(&:inspect).join(', ')
+    end
+    
+    def &(another)
+      if another.is_a?(ObjectT)
+        methods_of_both = (@supported_methods + another.supported_methods).uniq
+        ObjectT.new(*methods_of_both)
+      end
+    end
+  end
+  
   class HashOfOnlyT < HashT
     def ===(value)
       return false unless super
@@ -225,8 +250,9 @@ module Mal
     def |(another); EitherT.new(self, another); end
   end
   
-  private_constant :NilT, :BoolT, :EitherT, :MaybeT, :ArrayT, :HashT, :BoolT, :HashOfOnlyT, :MaxLengthT, :MinLengthT
-  
+  typespec_consts = self.constants.grep(/[a-z]T$/)
+  private_constant *typespec_consts
+
   # Specifies a value that may only ever be `nil` and nothing else
   def Nil()
     NilT.new(NilClass)
@@ -267,11 +293,21 @@ module Mal
   # Specifies a Hash containing at least the given keys, with values at those
   # keys matching the given matchers. For example, for a Hash having at
   # least the `:name` key with a corresponding value that is a String:
+  #
   #   HashOf(name: String)
+  #
   # Since the match is non-strict, it will also match a Hash having more keys
+  #
   #   HashOf(name: String) === {name: 'John Doe', age: 21} #=> true
   def HashWith(**keys_to_values)
     HashT.new(**keys_to_values)
+  end
+
+  # Specifies an object responding to certain methods
+  #
+  #   ObjectWith(:downcase) === "foo" #=> true
+  def ObjectWith(*properties)
+    ObjectT.new(*properties)
   end
   
   def OfAtLeastElements(n)

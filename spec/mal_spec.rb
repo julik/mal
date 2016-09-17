@@ -378,4 +378,43 @@ describe 'Mal' do
       expect_match_of(Anything(), false)
     end
   end
+  
+  describe 'ObjectWith()' do
+    it 'has a reasonable inspect' do
+      expect(ObjectWith(:upcase, :downcase).inspect).to eq('ObjectWith(:upcase, :downcase)')
+    end
+    
+    it 'matches only objects that respond to the methods defined' do
+      m = ObjectWith(:upcase, :downcase)
+      only_downcase = Struct.new(:downcase).new('nope')
+      only_upcase = Struct.new(:upcase).new('nope')
+      both = Struct.new(:upcase, :downcase).new('A', 'a')
+      
+      expect_match_of(m, 'foo')
+      expect_match_of(m, both)
+      expect_no_match_of(m, only_downcase)
+      expect_no_match_of(m, only_upcase)
+    end
+    
+    it 'ORs to a Both' do
+      m = ObjectWith(:upcase) | Nil()
+      
+      expect(m.inspect).to eq('Either(ObjectWith(:upcase), Nil())')
+    end
+    
+    it 'ANDs to a single ObjectWith' do
+      m = ObjectWith(:upcase) & ObjectWith(:downcase)
+      
+      expect(m.inspect).to eq('ObjectWith(:upcase, :downcase)')
+      
+      only_downcase = Struct.new(:downcase).new('nope')
+      only_upcase = Struct.new(:upcase).new('nope')
+      both = Struct.new(:upcase, :downcase).new('A', 'a')
+      
+      expect_match_of(m, 'foo')
+      expect_match_of(m, both)
+      expect_no_match_of(m, only_downcase)
+      expect_no_match_of(m, only_upcase)
+    end
+  end
 end
