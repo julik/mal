@@ -378,7 +378,7 @@ describe 'Mal' do
       expect_match_of(Anything(), false)
     end
   end
-  
+
   describe 'ObjectWith()' do
     it 'has a reasonable inspect' do
       expect(ObjectWith(:upcase, :downcase).inspect).to eq('ObjectWith(:upcase, :downcase)')

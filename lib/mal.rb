@@ -294,11 +294,11 @@ module Mal
   # keys matching the given matchers. For example, for a Hash having at
   # least the `:name` key with a corresponding value that is a String:
   #
-  #   HashOf(name: String)
+  #   HashWith(name: String)
   #
   # Since the match is non-strict, it will also match a Hash having more keys
   #
-  #   HashOf(name: String) === {name: 'John Doe', age: 21} #=> true
+  #   HashWith(name: String) === {name: 'John Doe', age: 21} #=> true
   def HashWith(**keys_to_values)
     HashT.new(**keys_to_values)
   end
