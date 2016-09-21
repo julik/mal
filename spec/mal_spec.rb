@@ -377,6 +377,11 @@ describe 'Mal' do
       expect_match_of(Anything(), true)
       expect_match_of(Anything(), false)
     end
+    
+    it 'ANDs to the right hand operand' do
+      m = Anything() & Bool()
+      expect(m.inspect).to eq('Bool()')
+    end
   end
 
   describe 'ObjectWith()' do
@@ -415,6 +420,29 @@ describe 'Mal' do
       expect_match_of(m, both)
       expect_no_match_of(m, only_downcase)
       expect_no_match_of(m, only_upcase)
+    end
+  end
+  
+  describe 'Value()' do
+    it 'provides a good inspect' do
+      expect(Value('ohai').inspect).to eq('Value("ohai")')
+    end
+    
+    it 'matches only the exact value given' do
+      expect_match_of(Value(8), 8)
+      expect_no_match_of(Value(8), 4)
+      expect_no_match_of(Value(8), {})
+      expect_no_match_of(Value(:ohai), {})
+    end
+    
+    it 'ORs to an Either' do
+      m = Value(7) | Value(5)
+      expect(m.inspect).to eq('Either(Value(7), Value(5))')
+    end
+
+    it 'ANDs to the right operand' do
+      m = Value(10) & Value(2)
+      expect(m.inspect).to eq('Both(Value(10), Value(2))')
     end
   end
 end

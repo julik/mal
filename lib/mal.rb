@@ -174,6 +174,8 @@ module Mal
       return false unless value.respond_to? :length
       @desired_length == value.length
     end
+    
+    def inspect; 'OfElements(%d)' % @desired_length; end
   end
 
   class MinLengthT < LengthT
@@ -248,6 +250,13 @@ module Mal
     def initialize; super(TrueClass, FalseClass); end
     def inspect; 'Bool()'; end
     def |(another); EitherT.new(self, another); end
+  end
+  
+  class ValueT < OnlyT
+    def ===(value)
+      @matchable == value
+    end
+    def inspect; 'Value(%s)' % @matchable.inspect; end
   end
   
   typespec_consts = self.constants.grep(/[a-z]T$/)
@@ -334,6 +343,13 @@ module Mal
   # Just like it says: will match any value given to it
   def Anything()
     AnythingT.new
+  end
+  
+  # Matches the contained value exactly using the == operator. Will work well
+  # where exact matches are desired, i.e. for strings, numbers and native language
+  # types.
+  def Value(value)
+    ValueT.new(value)
   end
   
   extend self
