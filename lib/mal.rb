@@ -145,7 +145,20 @@ module Mal
       'HashOf(%s)' % @required_keys_to_matchers.inspect[1..-2]
     end
   end
-  
+
+  class HashPermittingT < HashT
+    def ===(value)
+      return false unless super
+      permitted = Set.new(@required_keys_to_matchers.keys)
+      present = Set.new(value.keys)
+      present.subset?(permitted)
+    end
+    
+    def inspect
+      'HashPermitting(%s)' % @required_keys_to_matchers.inspect[1..-2]
+    end
+  end
+
   class ArrayT < OnlyT
     def initialize(matcher_for_each_array_element)
       @matcher_for_each_array_element = matcher_for_each_array_element
@@ -259,6 +272,27 @@ module Mal
     def inspect; 'Value(%s)' % @matchable.inspect; end
   end
   
+  class SatisfyingT < OnlyT
+    def initialize(&blk)
+      super(blk.to_proc) # Use an OnlyT since Proc objects support ===
+    end
+    def inspect; 'Satisfying(&blk)'; end
+  end
+
+  class IncludingT < ValueT
+    def ===(value)
+      @matchable.include?(value)
+    end
+    def inspect; 'IncludedIn(%s)' % @matchable.inspect; end
+  end
+  
+  class CoveringT < ValueT
+    def ===(value)
+      @matchable.cover?(value)
+    end
+    def inspect; 'CoveredBy(%s)' % @matchable.inspect; end
+  end
+
   typespec_consts = self.constants.grep(/[a-z]T$/)
   private_constant *typespec_consts
 
@@ -340,6 +374,13 @@ module Mal
     HashOfOnlyT.new(**keys_to_values)
   end
   
+  # Specifies a Hash containing the given keys/values or their subset,
+  # will also match an empty Hash. Will _not_ match a Hash having extra
+  # keys.
+  def HashPermitting(**keys_to_values)
+    HashPermittingT.new(**keys_to_values)
+  end
+  
   # Just like it says: will match any value given to it
   def Anything()
     AnythingT.new
@@ -350,6 +391,20 @@ module Mal
   # types.
   def Value(value)
     ValueT.new(value)
+  end
+  
+  # Matches the given value if the passed block/Proc returns true when called with that value
+  #   Satisfying {|x| x > 10 } === 11 #=> true
+  def Satisfying(&blk)
+    SatisfyingT.new(&blk)
+  end
+  
+  def CoveredBy(range)
+    CoveringT.new(range)
+  end
+
+  def IncludedIn(*values)
+    IncludingT.new(values)
   end
   
   extend self

@@ -286,7 +286,58 @@ describe 'Mal' do
       expect_no_match_of(m, {age: 21})
     end
   end
-  
+
+  describe 'HashPermitting()' do
+    it 'provides a good inspect' do
+      m = HashPermitting(foo: Maybe(Fixnum))
+      expect(m.inspect).to eq("HashPermitting(:foo=>Maybe(Fixnum))")
+    end
+    
+    it 'does not match other types' do
+      m = HashPermitting(foo: Symbol)
+      expect_no_match_of(m, nil)
+      expect_no_match_of(m, [])
+      expect_no_match_of(m, self)
+    end
+    
+    it 'does match an empty Hash when asked to' do
+      m = HashPermitting({})
+      expect_match_of(m, {})
+    end
+    
+    it 'does not match a Hash whose value does not satisfy the matcher' do
+      m = HashPermitting(some_key: Nil())
+      expect_no_match_of(m, {some_key: true})
+    end
+    
+    it 'does match a Hash whose keys/values do satisfy the matcher' do
+      m = HashPermitting(some_key: Maybe(String))
+      expect_match_of(m, {some_key: nil})
+      expect_match_of(m, {some_key: 'hello world'})
+    end
+
+    it 'does not match a Hash that has more keys than requested' do
+      m = HashPermitting(name: String)
+      expect_no_match_of(m, {name: 'John Doe', age: 21})
+    end
+    
+    it 'ORs to an Either()' do
+      m = HashPermitting(name: String) | HashPermitting(first_name: String, last_name: String)
+      expect(m.inspect).to eq('Either(HashPermitting(:name=>String), HashPermitting(:first_name=>String, :last_name=>String))')
+      expect_match_of(m, {name: 'Jane'})
+      expect_match_of(m, {first_name: 'Jane', last_name: 'Doe'})
+      expect_no_match_of(m, {name: 'Jane', first_name: 'Jane', last_name: 'Doe'})
+    end
+    
+    it 'ANDs to a Both' do
+      m = Both(HashPermitting(name: Anything()), HashPermitting(name: Anything(), age: Anything()))
+      expect(m.inspect).to eq('Both(HashPermitting(:name=>Anything()), HashPermitting(:name=>Anything(), :age=>Anything()))')
+      expect_no_match_of(m, {name: nil, age: 12})
+      expect_no_match_of(m, {name: 'Jane'})
+      expect_no_match_of(m, {age: 21})
+    end
+  end
+
   describe 'HashOf()' do
     it 'provides a good inspect' do
       m = HashOf(foo: Maybe(Fixnum))
