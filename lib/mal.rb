@@ -36,6 +36,12 @@
 #
 #    HashWith(age: Fixnum) === {age: 12, name: 'Cisco Kid'} #=> true
 #    HashOf(age: Fixnum) === {age: 12, name: 'Cisco Kid'} #=> false
+#
+# Note that it is _entirely_ plausible that you would not want to include Mal into
+# your object/class/whatever. For that case, calling methods using their qualified
+# module name (`Mal.Some()...`) can become a nuisance. If it does,
+# use `Mal.typespec` which is a shortcut to `instance_exec` - but has the convenient
+# property of not alerting your style watchers to your use of `instance_exec` :-P
 module Mal
   VERSION = '0.0.3'
   
@@ -405,6 +411,14 @@ module Mal
 
   def IncludedIn(*values)
     IncludingT.new(values)
+  end
+  
+  # A shortcut for `instance_exec`, for defining types using shorthand method names
+  # from outside the module:
+  #
+  #    Mal.typespec { Either(Value(1), Value(2)) }
+  def self.typespec(&blk)
+    instance_exec(&blk)
   end
   
   extend self

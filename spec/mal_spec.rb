@@ -13,6 +13,11 @@ describe 'Mal' do
     expect(match_v).to eq(false), "Expected #{value.inspect} not to match #{typespec.inspect}"
   end
 
+  describe '.typespec' do
+    # TODO: we include Mal in this spec as is, so we might need to make another file
+    it 'allows shorthand typespecs to be created'
+  end
+  
   describe 'Anything()' do
     it 'provides a good inspect' do
       expect(Anything().inspect).to eq('Anything()')
