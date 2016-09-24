@@ -496,4 +496,23 @@ describe 'Mal' do
       expect(m.inspect).to eq('Both(Value(10), Value(2))')
     end
   end
+
+  describe 'CoveredBy()' do
+    it 'provides a good inspect' do
+      expect(CoveredBy(1..4).inspect).to eq('CoveredBy(1..4)')
+    end
+
+    it 'matches values covered by the Range' do
+      m = CoveredBy(1..4)
+      expect_match_of(m, 1)
+      expect_match_of(m, 2)
+      expect_match_of(m, 3)
+      expect_match_of(m, 4)
+
+      expect_no_match_of(m, 0)
+      expect_no_match_of(m, 5)
+      expect_no_match_of(m, 'Ohai')
+      expect_no_match_of(m, nil)
+    end
+  end
 end
