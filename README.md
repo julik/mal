@@ -1,6 +1,6 @@
 # mal
 
-Minuscule (Type) Algerba - a type-matching thing for Ruby.
+Minuscule (Type) Algebra - a type-matching thing for Ruby.
 
 The library allows you to do simple type matching based on _any_ Ruby types that support the "triqual"
 operator (type equality). It is distantly related to libraries like rb_dry_types
