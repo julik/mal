@@ -43,7 +43,7 @@
 # use `Mal.typespec` which is a shortcut to `instance_exec` - but has the convenient
 # property of not alerting your style watchers to your use of `instance_exec` :-P
 module Mal
-  VERSION = '0.0.3'
+  VERSION = '0.0.4'
   
   class AnythingT
     def ===(value)
